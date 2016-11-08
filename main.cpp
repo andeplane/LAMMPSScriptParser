@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
 {
     QString fileName("/Users/anderhaf/Desktop/lj.in");
 
-    if(argc > 1) fileName = QString(argv[1]);
+    // if(argc > 1) fileName = QString(argv[1]);
     QFile file(fileName);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qDebug() << "Error, could not open file " << fileName;

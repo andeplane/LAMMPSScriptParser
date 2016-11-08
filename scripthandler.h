@@ -33,9 +33,9 @@ private:
     QStack<class Script*> m_scriptStack;
     QList<QString> m_commands;
     QString includePath(const ScriptCommand &command);
-    bool canAddCommandsAfter(const ScriptCommand &command);
+    bool commandRequiresSynchronization(const ScriptCommand &command);
     int m_simulationSpeed = 1;
-    bool m_runningScript;
+    bool m_runningScript = false;
     bool m_preRunNeeded = true;
     unsigned int m_runCommandStart = 0;
     unsigned int m_runCommandEnd = 0;

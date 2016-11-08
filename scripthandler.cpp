@@ -46,7 +46,34 @@ QString ScriptHandler::includePath(const ScriptCommand &command) {
     return QString(""); // Not an include command
 }
 
-bool ScriptHandler::canAddCommandsAfter(const ScriptCommand &command) {
+bool ScriptHandler::commandRequiresSynchronization(const ScriptCommand &command) {
+    // All of these commands might change visuals so we should synchronize
+    if(command.command().trimmed().startsWith("create_box")) return true;
+    if(command.command().trimmed().startsWith("create_atoms")) return true;
+    if(command.command().trimmed().startsWith("read_data")) return true;
+    if(command.command().trimmed().startsWith("read_restart")) return true;
+    if(command.command().trimmed().startsWith("run")) return true;
+    if(command.command().trimmed().startsWith("minimize")) return true;
+    if(command.command().trimmed().startsWith("region")) return true;
+    if(command.command().trimmed().startsWith("group")) return true;
+    if(command.command().trimmed().startsWith("boundary")) return true;
+    if(command.command().trimmed().startsWith("change_box")) return true;
+    if(command.command().trimmed().startsWith("box")) return true;
+    if(command.command().trimmed().startsWith("create_bonds")) return true;
+    if(command.command().trimmed().startsWith("delete_atoms")) return true;
+    if(command.command().trimmed().startsWith("displace_atoms")) return true;
+    if(command.command().trimmed().startsWith("read_dump")) return true;
+    if(command.command().trimmed().startsWith("replicate")) return true;
+    if(command.command().trimmed().startsWith("set")) return true;
+    if(command.command().trimmed().startsWith("velocity")) return true;
+    if(command.command().trimmed().startsWith("compute")) return true;
+    if(command.command().trimmed().startsWith("fix")) return true;
+    if(command.command().trimmed().startsWith("variable")) return true;
+    if(command.command().trimmed().startsWith("uncompute")) return true;
+    if(command.command().trimmed().startsWith("unfix")) return true;
+    if(command.command().trimmed().startsWith("fix_modify")) return true;
+    if(command.command().trimmed().startsWith("compute_modify")) return true;
+
     return false;
 }
 
@@ -56,8 +83,7 @@ QList<ScriptCommand> ScriptHandler::singleCommand(LAMMPSController &controller) 
 
 QList<ScriptCommand> ScriptHandler::scriptCommands(LAMMPSController &controller) {
     QList<ScriptCommand> commands;
-    bool appendMoreCommands = true;
-    while(appendMoreCommands && m_scriptStack.size()>0) {
+    while(true) {
         ScriptCommand command = nextCommand();
         if(!includePath(command).isEmpty()) {
             // TODO: Handle this
@@ -67,12 +93,25 @@ QList<ScriptCommand> ScriptHandler::scriptCommands(LAMMPSController &controller)
         }
 
         commands.append(command);
+        if(commandRequiresSynchronization(command)) {
+            break;
+        }
+        if(!m_scriptStack.top()->hasNextLine()) {
+            break;
+        }
     }
     return commands;
 }
 
 QList<ScriptCommand> ScriptHandler::nextCommands(LAMMPSController &controller)
 {
+    if(m_runningScript) {
+        qDebug() << "Error, can't ask for more commands while we're still working on the previous commands";
+        throw "damn...";
+    }
+
+    m_runningScript = true;
+
     // Step 1) Check for single commands. Parse them as normal commands (i.e. include should work)
     if(m_commands.size() > 0) {
         return singleCommand(controller);
@@ -116,10 +155,6 @@ void ScriptHandler::didFinishPreviousCommands()
 
 ScriptCommand ScriptHandler::nextCommand()
 {
-    if(m_runningScript) {
-        qDebug() << "Error, can't ask for more commands while we're still working on the previous commands";
-        throw "damn...";
-    }
     assert(m_scriptStack.size()>0 && "scriptStack can't be empty when asking for nextCommand()");
 
     Script *script = m_scriptStack.top();
@@ -145,7 +180,6 @@ ScriptCommand ScriptHandler::nextCommand()
     }
 
     bool scriptIsFile = !script->fileName().isEmpty();
-    m_runningScript = true;
     return ScriptCommand(command, (scriptIsFile ? ScriptCommand::Type::File : ScriptCommand::Type::Editor), line);
 }
 
