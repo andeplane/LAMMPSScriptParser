@@ -3,7 +3,7 @@
 #include "script.h"
 #include "scripthandler.h"
 #include "scriptcommand.h"
-
+#include "lammpscontroller.h"
 #include <QtQml>
 
 int main(int argc, char *argv[])
@@ -25,11 +25,12 @@ int main(int argc, char *argv[])
 
 //    QQmlApplicationEngine engine;
 //    engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
+    LAMMPSController controller;
     ScriptHandler handler;
     handler.runScript(contents, fileName);
     while(handler.hasNextCommand()) {
         qDebug() << "New list of commands:";
-        QList<ScriptCommand> commands = handler.nextCommands();
+        QList<ScriptCommand> commands = handler.nextCommands(controller);
         for(const ScriptCommand& command : commands) {
             qDebug() << "   " << command.command();
         }

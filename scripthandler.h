@@ -17,9 +17,8 @@ public:
     QList<class ScriptCommand> nextCommands(class LAMMPSController &controller);
     int simulationSpeed() const;
     void setSimulationSpeed(int simulationSpeed);
-    bool hasNextCommand();
     void didFinishPreviousCommands();
-
+    bool hasNextCommand();
 signals:
     void newScript();
     void newCommand();

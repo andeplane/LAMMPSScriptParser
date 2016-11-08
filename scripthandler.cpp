@@ -4,6 +4,8 @@
 #include "runcommand.h"
 #include "lammpscontroller.h"
 #include <QDebug>
+#include <cassert>
+
 ScriptHandler::ScriptHandler(QObject *parent) : QObject(parent)
 {
 
@@ -17,9 +19,14 @@ void ScriptHandler::reset() {
     m_commands.clear();
 }
 
-void ScriptHandler::runCommand(QString command)
+bool ScriptHandler::runCommand(QString command)
 {
+    if(command.trimmed().startsWith("run") && m_activeRunCommand) {
+        return false;
+    }
+
     m_commands.append(command);
+    return true;
 }
 
 void ScriptHandler::runScript(QString script, QString fileName)
@@ -52,7 +59,7 @@ QList<ScriptCommand> ScriptHandler::scriptCommands(LAMMPSController &controller)
     bool appendMoreCommands = true;
     while(appendMoreCommands && m_scriptStack.size()>0) {
         ScriptCommand command = nextCommand();
-        if(includePath(command)) {
+        if(!includePath(command).isEmpty()) {
             // TODO: Handle this
             QString path = includePath(command);
             qDebug() << "Error, include statements not supported yet";
@@ -73,13 +80,18 @@ QList<ScriptCommand> ScriptHandler::nextCommands(LAMMPSController &controller)
 
     // Step 2) Continue active run/rerun command
     if(m_activeRunCommand) {
-        QString nextRunCommand = m_activeRunCommand->nextCommand(controller->currentTimestep, 1);
+        bool preRunNeeded = true;
+        QString nextRunCommand = m_activeRunCommand->nextCommand(controller.currentTimestep, 1, preRunNeeded);
+
         if(m_activeRunCommand->finished) {
             delete m_activeRunCommand;
             m_activeRunCommand = nullptr;
         }
+        QList<ScriptCommand> list;
+        ScriptCommand command(nextRunCommand, ScriptCommand::Type::File, 0); // TODO: line numbers
+        list.append(command);
 
-        return nextRunCommand;
+        return list;
     }
 
     // Step 3) Create command queue based on script stack
@@ -91,13 +103,13 @@ QList<ScriptCommand> ScriptHandler::nextCommands(LAMMPSController &controller)
 }
 
 bool ScriptHandler::hasNextCommand() {
-    return m_scriptStack.size() > 0;
+    return m_scriptStack.size()>0 || m_commands.size()>0;
 }
 
 void ScriptHandler::didFinishPreviousCommands()
 {
     m_runningScript = false;
-    if(m_scriptStack && !m_scriptStack.top()->hasNextLine()) {
+    if(m_scriptStack.size()>0 && !m_scriptStack.top()->hasNextLine()) {
         m_scriptStack.pop();
     }
 }
