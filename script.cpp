@@ -1,7 +1,7 @@
 #include "script.h"
 
 Script::Script(QObject *parent) : QObject(parent),
-  m_finished(false), m_currentLine(-1), m_crashed(false)
+  m_currentLine(-1)
 {
 
 }
@@ -11,19 +11,22 @@ QString Script::fileName() const
     return m_fileName;
 }
 
-bool Script::finished() const
-{
-    return m_finished;
-}
-
 int Script::currentLine() const
 {
     return m_currentLine;
 }
 
-bool Script::crashed() const
+bool Script::hasNextLine() const
 {
-    return m_crashed;
+    return m_currentLine+1 < m_lines.size();
+}
+
+QString Script::getNextLine()
+{
+    if(!hasNextLine()) return QString(""); //TODO: should never happen. User should ask for hasNextLine first, so throw error in the future.
+    QString nextLine = m_lines.at(m_currentLine);
+    setCurrentLine(currentLine()+1);
+    return nextLine;
 }
 
 QString Script::script() const
@@ -40,15 +43,6 @@ void Script::setFileName(QString fileName)
     emit fileNameChanged(fileName);
 }
 
-void Script::setFinished(bool finished)
-{
-    if (m_finished == finished)
-        return;
-
-    m_finished = finished;
-    emit finishedChanged(finished);
-}
-
 void Script::setCurrentLine(int currentLine)
 {
     if (m_currentLine == currentLine)
@@ -58,20 +52,19 @@ void Script::setCurrentLine(int currentLine)
     emit currentLineChanged(currentLine);
 }
 
-void Script::setCrashed(bool crashed)
-{
-    if (m_crashed == crashed)
-        return;
-
-    m_crashed = crashed;
-    emit crashedChanged(crashed);
-}
-
 void Script::setScript(QString script)
 {
     if (m_script == script)
         return;
 
     m_script = script;
+    readLines();
     emit scriptChanged(script);
+}
+
+void Script::readLines()
+{
+    m_lines = m_script.split(QRegExp("\n|\r\n|\r"));
+    setCurrentLine(0);
+    // TODO: process lines, search for labels
 }

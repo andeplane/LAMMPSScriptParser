@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QStack>
+#include <QList>
 
 class ScriptHandler : public QObject
 {
@@ -11,8 +12,13 @@ class ScriptHandler : public QObject
 public:
     explicit ScriptHandler(QObject *parent = 0);
     Q_INVOKABLE void reset();
-    Q_INVOKABLE void runCommand(QString command);
+    Q_INVOKABLE bool runCommand(QString command);
     Q_INVOKABLE void runScript(QString script, QString fileName);
+    QList<class ScriptCommand> nextCommands(class LAMMPSController &controller);
+    int simulationSpeed() const;
+    void setSimulationSpeed(int simulationSpeed);
+    bool hasNextCommand();
+    void didFinishPreviousCommands();
 
 signals:
     void newScript();
@@ -21,8 +27,19 @@ signals:
 public slots:
 
 private:
+    class ScriptCommand nextCommand();
+    QList<class ScriptCommand> singleCommand(class LAMMPSController &controller);
+    QList<class ScriptCommand> scriptCommands(class LAMMPSController &controller);
+    class RunCommand *m_activeRunCommand = nullptr;
     QStack<class Script*> m_scriptStack;
-    QVector<QString> m_commands;
+    QList<QString> m_commands;
+    QString includePath(const ScriptCommand &command);
+    bool canAddCommandsAfter(const ScriptCommand &command);
+    int m_simulationSpeed = 1;
+    bool m_runningScript;
+    bool m_preRunNeeded = true;
+    unsigned int m_runCommandStart = 0;
+    unsigned int m_runCommandEnd = 0;
 };
 
 #endif // SCRIPTHANDLER_H

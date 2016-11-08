@@ -5,7 +5,10 @@ CONFIG += c++11
 
 SOURCES += main.cpp \
     script.cpp \
-    scripthandler.cpp
+    scripthandler.cpp \
+    scriptcommand.cpp \
+    runcommand.cpp \
+    lammpscontroller.cpp
 
 RESOURCES += qml.qrc
 
@@ -19,4 +22,7 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 HEADERS += \
     script.h \
-    scripthandler.h
+    scripthandler.h \
+    scriptcommand.h \
+    runcommand.h \
+    lammpscontroller.h
