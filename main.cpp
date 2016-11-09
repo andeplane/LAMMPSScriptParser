@@ -8,7 +8,7 @@
 
 int main(int argc, char *argv[])
 {
-    QString fileName("/Users/anderhaf/Desktop/lj.in");
+    QString fileName("/projects/LAMMPSScriptParser/LAMMPSScriptParser/lj.in");
 
     // if(argc > 1) fileName = QString(argv[1]);
     QFile file(fileName);
@@ -27,6 +27,7 @@ int main(int argc, char *argv[])
 //    engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
     LAMMPSController controller;
     ScriptHandler handler;
+
     handler.runScript(contents, fileName);
     while(handler.hasNextCommand()) {
         qDebug() << "New list of commands:";

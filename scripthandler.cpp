@@ -3,7 +3,11 @@
 #include "scriptcommand.h"
 #include "runcommand.h"
 #include "lammpscontroller.h"
+#include <unistd.h>
 #include <QDebug>
+#include <QFileInfo>
+#include <QDir>
+#include <QUrl>
 #include <cassert>
 
 ScriptHandler::ScriptHandler(QObject *parent) : QObject(parent)
@@ -34,14 +38,20 @@ void ScriptHandler::runScript(QString script, QString fileName)
     Script *scriptObj = new Script(this);
     scriptObj->setFileName(fileName);
     scriptObj->setScript(script);
+    qDebug() << "Running script with fileName: " << fileName;
 
     m_scriptStack.push(scriptObj);
     emit newScript();
 }
 
 QString ScriptHandler::includePath(const ScriptCommand &command) {
-    if(command.command().startsWith("include")) {
-        //TODO: Handle this
+    if(command.command().trimmed().startsWith("include")) {
+        QStringList list = command.command().trimmed().split(QRegExp("\\s+"), QString::SkipEmptyParts);
+        if(list.size()>1) {
+            QString argument = list.at(1);
+            // TODO: see if this is a variable
+            return argument;
+        }
     }
     return QString(""); // Not an include command
 }
@@ -85,13 +95,25 @@ QList<ScriptCommand> ScriptHandler::scriptCommands(LAMMPSController &controller)
     QList<ScriptCommand> commands;
     while(true) {
         ScriptCommand command = nextCommand();
+        qDebug() << "New command: " << command.command();
+
         if(!includePath(command).isEmpty()) {
-            // TODO: Handle this
             QString path = includePath(command);
-            qDebug() << "Error, include statements not supported yet";
-            exit(1);
+
+            QFileInfo info(path);
+            if(info.exists()) {
+                Script *script = new Script(this);
+                script->setFileName(path);
+                script->readFile();
+                m_scriptStack.push(script);
+                return commands;
+            } else {
+                qDebug() << "Error, could not find file " << path;
+                continue;
+            }
         }
 
+        qDebug() << "Appending " << command.command();
         commands.append(command);
         if(commandRequiresSynchronization(command)) {
             break;
@@ -149,8 +171,21 @@ void ScriptHandler::didFinishPreviousCommands()
 {
     m_runningScript = false;
     if(m_scriptStack.size()>0 && !m_scriptStack.top()->hasNextLine()) {
-        m_scriptStack.pop();
+        Script *script = m_scriptStack.pop();
+        delete script;
     }
+}
+
+void ScriptHandler::setWorkingDirectory(QString fileName) {
+    QFileInfo fileInfo(fileName);
+    qDebug() << "Trying to change dir to " << fileName;
+    if(!fileInfo.exists()) return;
+
+    QString currentDir = fileInfo.absoluteDir().path();
+    QByteArray currentDirBytes = currentDir.toUtf8();
+    qDebug() << "Changing dir to " << currentDir;
+
+    chdir(currentDirBytes.constData());
 }
 
 ScriptCommand ScriptHandler::nextCommand()
@@ -158,6 +193,7 @@ ScriptCommand ScriptHandler::nextCommand()
     assert(m_scriptStack.size()>0 && "scriptStack can't be empty when asking for nextCommand()");
 
     Script *script = m_scriptStack.top();
+    setWorkingDirectory(script->fileName());
     int line = script->currentLine();
 
     QString command;
@@ -180,7 +216,7 @@ ScriptCommand ScriptHandler::nextCommand()
     }
 
     bool scriptIsFile = !script->fileName().isEmpty();
-    return ScriptCommand(command, (scriptIsFile ? ScriptCommand::Type::File : ScriptCommand::Type::Editor), line);
+    return ScriptCommand(command,  (scriptIsFile ? ScriptCommand::Type::File : ScriptCommand::Type::Editor), line);
 }
 
 int ScriptHandler::simulationSpeed() const

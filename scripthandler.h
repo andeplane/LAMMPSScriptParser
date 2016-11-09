@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QStack>
 #include <QList>
+#include <QUrl>
 
 class ScriptHandler : public QObject
 {
@@ -39,6 +40,7 @@ private:
     bool m_preRunNeeded = true;
     unsigned int m_runCommandStart = 0;
     unsigned int m_runCommandEnd = 0;
+    void setWorkingDirectory(QString fileName);
 };
 
 #endif // SCRIPTHANDLER_H
