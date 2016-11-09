@@ -21,7 +21,7 @@ int Script::currentLine() const
 
 bool Script::hasNextLine() const
 {
-    return m_currentLine+1 < m_lines.size();
+    return m_currentLine < m_lines.size();
 }
 
 QString Script::getNextLine()
